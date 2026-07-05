@@ -1,0 +1,16 @@
+{
+  "name": "Chinese Sentence Notebook",
+  "short_name": "中国語ノート",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#fff7ed",
+  "theme_color": "#dc2626",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
