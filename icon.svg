@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Chinese Sentence Notebook icon</title>
+  <desc id="desc">A simple cream and red app icon with the Chinese character 中.</desc>
+  <rect width="512" height="512" rx="112" fill="#fff7ed"/>
+  <circle cx="256" cy="256" r="184" fill="#fee2e2"/>
+  <circle cx="256" cy="256" r="146" fill="#dc2626"/>
+  <path d="M166 182h180v156H166z" fill="none" stroke="#fff7ed" stroke-width="34" stroke-linejoin="round"/>
+  <path d="M256 124v264" stroke="#fff7ed" stroke-width="38" stroke-linecap="round"/>
+</svg>
