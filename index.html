@@ -2,8 +2,435 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>Chinese Sentence Notebook</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>中国語センテンスノート</title>
+  <style>
+    :root {
+      --bg: #fff8ef;
+      --panel: #ffffff;
+      --panel-soft: #fffdf9;
+      --text: #2f2b26;
+      --muted: #70675e;
+      --primary: #e86f51;
+      --primary-dark: #c95438;
+      --accent: #2e9d8f;
+      --accent-soft: #e8f7f4;
+      --line: #eaded1;
+      --danger: #c84040;
+      --danger-soft: #fff0f0;
+      --warning: #a46b00;
+      --warning-soft: #fff6df;
+      --shadow: 0 16px 38px rgba(96, 65, 39, 0.12);
+      --radius: 22px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(232, 111, 81, 0.18), transparent 30rem),
+        radial-gradient(circle at top right, rgba(46, 157, 143, 0.14), transparent 26rem),
+        var(--bg);
+      line-height: 1.7;
+    }
+
+    header {
+      padding: 42px 20px 20px;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(1.9rem, 5vw, 3rem);
+      letter-spacing: 0.04em;
+    }
+
+    .lead {
+      max-width: 780px;
+      margin: 0 auto;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    main {
+      width: min(1120px, calc(100% - 28px));
+      margin: 0 auto 56px;
+    }
+
+    section, .card {
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid rgba(234, 222, 209, 0.9);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    section { padding: clamp(18px, 3vw, 28px); margin-top: 20px; }
+
+    h2, h3 { line-height: 1.35; margin: 0; }
+    h2 { font-size: 1.35rem; margin-bottom: 14px; }
+    h3 { font-size: 1.05rem; margin-bottom: 10px; }
+
+    textarea {
+      width: 100%;
+      min-height: 250px;
+      padding: 16px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--panel-soft);
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.95rem;
+      line-height: 1.65;
+      outline: none;
+    }
+
+    textarea:focus, input:focus, select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(232, 111, 81, 0.14);
+    }
+
+    .button-row, .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-top: 14px;
+    }
+
+    button, .file-label {
+      appearance: none;
+      border: 0;
+      border-radius: 999px;
+      padding: 11px 18px;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+      box-shadow: 0 8px 18px rgba(232, 111, 81, 0.22);
+    }
+
+    button:hover, .file-label:hover { transform: translateY(-1px); background: var(--primary-dark); }
+    button.secondary, .file-label { background: var(--accent); box-shadow: 0 8px 18px rgba(46, 157, 143, 0.18); }
+    button.secondary:hover, .file-label:hover { background: #237e73; }
+    button.ghost { background: #f4ebe2; color: var(--text); box-shadow: none; }
+    button.danger { background: var(--danger); box-shadow: 0 8px 18px rgba(200, 64, 64, 0.18); }
+
+    input, select {
+      min-height: 46px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 0 15px;
+      background: #fff;
+      color: var(--text);
+      font-size: 0.95rem;
+      outline: none;
+    }
+
+    .search-input { flex: 1 1 260px; }
+    .status { margin-top: 12px; padding: 12px 14px; border-radius: 16px; display: none; font-weight: 700; }
+    .status.show { display: block; }
+    .status.success { background: var(--accent-soft); color: #1f766c; }
+    .status.error { background: var(--danger-soft); color: var(--danger); }
+    .status.info { background: var(--warning-soft); color: var(--warning); }
+
+    .preview { display: grid; gap: 12px; margin-top: 16px; }
+    .preview-item { padding: 14px; border: 1px dashed var(--line); border-radius: 16px; background: #fffaf4; }
+    .preview-title { font-weight: 800; }
+    .preview-sentence { font-size: 1.25rem; margin-top: 4px; font-family: Georgia, "Times New Roman", "Noto Serif SC", serif; }
+
+    .stats { color: var(--muted); font-weight: 700; margin-left: auto; }
+    .cards { display: grid; gap: 18px; margin-top: 18px; }
+    .empty { padding: 34px; text-align: center; color: var(--muted); background: rgba(255,255,255,0.75); border: 1px dashed var(--line); border-radius: var(--radius); }
+
+    .card { padding: clamp(18px, 3vw, 26px); }
+    .card-head { display: flex; gap: 12px; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .tag { display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px; border-radius: 999px; background: var(--accent-soft); color: #21786e; font-weight: 800; font-size: 0.85rem; }
+    .source { color: var(--muted); font-size: 0.9rem; margin-top: 6px; }
+    .sentence { margin: 14px 0 6px; font-family: Georgia, "Times New Roman", "Noto Serif SC", serif; font-size: clamp(1.8rem, 7vw, 3rem); line-height: 1.25; letter-spacing: 0.03em; }
+    .pinyin { color: var(--primary-dark); font-size: clamp(1.05rem, 3.6vw, 1.35rem); font-weight: 700; }
+    .translation { margin: 16px 0; padding: 14px 16px; border-left: 5px solid var(--primary); border-radius: 14px; background: #fff4ec; font-weight: 700; }
+    .note { color: var(--muted); background: #fbf7f1; border-radius: 14px; padding: 12px 14px; }
+    .card-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; }
+    table { width: 100%; border-collapse: collapse; min-width: 680px; background: #fff; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { background: #fff4ec; white-space: nowrap; }
+    tr:last-child td { border-bottom: 0; }
+
+    .grammar-list { display: grid; gap: 10px; }
+    .grammar-item { padding: 12px 14px; background: #f8fcfb; border: 1px solid #d8efeb; border-radius: 14px; }
+    .grammar-name { font-weight: 800; color: #21786e; }
+    .subsection { margin-top: 18px; }
+    .hidden-input { display: none; }
+
+    @media (max-width: 680px) {
+      header { padding-top: 30px; }
+      main { width: min(100% - 20px, 1120px); }
+      section { padding: 16px; }
+      button, .file-label { width: 100%; text-align: center; }
+      .toolbar { align-items: stretch; }
+      input, select { width: 100%; }
+      .stats { width: 100%; margin-left: 0; }
+      .card-head { flex-direction: column; }
+      .card-actions { width: 100%; }
+    }
+  </style>
 </head>
 <body>
+  <header>
+    <h1>中国語センテンスノート</h1>
+    <p class="lead">ChatGPTで作成した中国語分析JSONを貼り付けるだけで、文・ピンイン・日本語訳・単語・文法解説を学習カードとして保存できます。</p>
+  </header>
+
+  <main>
+    <section aria-labelledby="json-heading">
+      <h2 id="json-heading">JSON貼り付け欄</h2>
+      <textarea id="jsonInput" placeholder="ここに中国語分析JSONを貼り付けてください"></textarea>
+      <div class="button-row">
+        <button id="previewButton">読み込み前プレビュー</button>
+        <button id="loadButton">JSONを読み込む</button>
+        <button id="sampleButton" class="secondary">サンプルJSONを入れる</button>
+        <label class="file-label" for="importFile">JSONをインポート</label>
+        <input id="importFile" class="hidden-input" type="file" accept="application/json,.json">
+      </div>
+      <div id="message" class="status" role="status"></div>
+      <div id="preview" class="preview" aria-live="polite"></div>
+    </section>
+
+    <section aria-labelledby="list-heading">
+      <h2 id="list-heading">保存したカード</h2>
+      <div class="toolbar">
+        <input id="searchInput" class="search-input" type="search" placeholder="中国語・ピンイン・日本語訳・単語を検索">
+        <select id="tagFilter" aria-label="タグで絞り込み">
+          <option value="">すべてのタグ</option>
+        </select>
+        <button id="exportButton" class="secondary">JSONエクスポート</button>
+        <button id="deleteAllButton" class="danger">全削除</button>
+        <span id="stats" class="stats"></span>
+      </div>
+      <div id="cards" class="cards"></div>
+    </section>
+  </main>
+
+  <script>
+    const STORAGE_KEY = 'chinese-sentence-notebook.cards.v1';
+    const sampleData = [{
+      title: '自己紹介で使える中国語',
+      sentence: '我喜欢学习中文。',
+      pinyin: 'Wǒ xǐhuān xuéxí Zhōngwén.',
+      translation: '私は中国語を勉強するのが好きです。',
+      tag: '自己紹介',
+      source: '',
+      note: '喜欢は「〜が好き」という意味で、後ろに動詞や名詞を置けます。',
+      words: [
+        { word: '我', pinyin: 'wǒ', meaning: '私', partOfSpeech: '代名詞', tone: '3声', note: '自分を表す基本単語です。' },
+        { word: '喜欢', pinyin: 'xǐhuān', meaning: '好き', partOfSpeech: '動詞', tone: '3声＋軽声', note: '後ろに名詞や動詞を置いて使えます。' },
+        { word: '学习', pinyin: 'xuéxí', meaning: '勉強する', partOfSpeech: '動詞', tone: '2声＋2声', note: '学習することを表します。' }
+      ],
+      grammar: [
+        { target: '我喜欢学习中文', name: '喜欢＋動詞', explanation: '「〜するのが好き」と言いたいときに使う形です。' }
+      ]
+    }];
+
+    const jsonInput = document.getElementById('jsonInput');
+    const message = document.getElementById('message');
+    const preview = document.getElementById('preview');
+    const cardsEl = document.getElementById('cards');
+    const searchInput = document.getElementById('searchInput');
+    const tagFilter = document.getElementById('tagFilter');
+    const stats = document.getElementById('stats');
+    const importFile = document.getElementById('importFile');
+    let cards = loadCards();
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
+    }
+
+    function showMessage(text, type = 'info') {
+      message.textContent = text;
+      message.className = `status show ${type}`;
+    }
+
+    function parseJson(text) {
+      try {
+        const parsed = JSON.parse(text);
+        const items = Array.isArray(parsed) ? parsed : [parsed];
+        if (!items.every(item => item && typeof item === 'object' && !Array.isArray(item))) {
+          throw new Error('notObject');
+        }
+        return items.map(normalizeCard);
+      } catch (error) {
+        throw new Error(error.message === 'notObject'
+          ? 'JSON配列またはJSONオブジェクトを入力してください。'
+          : 'JSONの形が少し崩れています。カンマやダブルクォーテーションを確認してください。');
+      }
+    }
+
+    function normalizeCard(item) {
+      return {
+        id: item.id || `card-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        title: item.title || '無題のカード',
+        sentence: item.sentence || '',
+        pinyin: item.pinyin || '',
+        translation: item.translation || '',
+        tag: item.tag || '未分類',
+        source: item.source || '',
+        note: item.note || '',
+        words: Array.isArray(item.words) ? item.words.map(word => ({
+          word: word.word || '',
+          pinyin: word.pinyin || '',
+          meaning: word.meaning || '',
+          partOfSpeech: word.partOfSpeech || '',
+          tone: word.tone || '',
+          note: word.note || ''
+        })) : [],
+        grammar: Array.isArray(item.grammar) ? item.grammar.map(rule => ({
+          target: rule.target || '',
+          name: rule.name || '',
+          explanation: rule.explanation || ''
+        })) : [],
+        favorite: Boolean(item.favorite),
+        createdAt: item.createdAt || new Date().toISOString()
+      };
+    }
+
+    function loadCards() {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]').map(normalizeCard); }
+      catch { return []; }
+    }
+
+    function saveCards() { localStorage.setItem(STORAGE_KEY, JSON.stringify(cards)); }
+
+    function updateTags() {
+      const current = tagFilter.value;
+      const tags = [...new Set(cards.map(card => card.tag).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ja'));
+      tagFilter.innerHTML = '<option value="">すべてのタグ</option>' + tags.map(tag => `<option value="${escapeHtml(tag)}">${escapeHtml(tag)}</option>`).join('');
+      tagFilter.value = tags.includes(current) ? current : '';
+    }
+
+    function getFilteredCards() {
+      const keyword = searchInput.value.trim().toLowerCase();
+      const tag = tagFilter.value;
+      return cards.filter(card => {
+        const haystack = [card.title, card.sentence, card.pinyin, card.translation, card.note, card.tag, ...card.words.flatMap(w => [w.word, w.pinyin, w.meaning, w.note]), ...card.grammar.flatMap(g => [g.target, g.name, g.explanation])].join(' ').toLowerCase();
+        return (!tag || card.tag === tag) && (!keyword || haystack.includes(keyword));
+      });
+    }
+
+    function render() {
+      updateTags();
+      const filtered = getFilteredCards();
+      stats.textContent = `${filtered.length} / ${cards.length}件表示`;
+      if (filtered.length === 0) {
+        cardsEl.innerHTML = '<div class="empty">カードがありません。JSONを貼り付けて読み込んでください。</div>';
+        return;
+      }
+      cardsEl.innerHTML = filtered.map(card => `
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <span class="tag"># ${escapeHtml(card.tag)}</span>
+              <h3>${escapeHtml(card.title)}</h3>
+              ${card.source ? `<div class="source">出典：${escapeHtml(card.source)}</div>` : ''}
+            </div>
+            <div class="card-actions">
+              <button class="ghost" data-action="favorite" data-id="${card.id}">${card.favorite ? '★ お気に入り済み' : '☆ お気に入り'}</button>
+              <button class="danger" data-action="delete" data-id="${card.id}">削除</button>
+            </div>
+          </div>
+          <div class="sentence">${escapeHtml(card.sentence || '（中国語文なし）')}</div>
+          <div class="pinyin">${escapeHtml(card.pinyin || '（ピンインなし）')}</div>
+          <div class="translation">${escapeHtml(card.translation || '（日本語訳なし）')}</div>
+          ${card.note ? `<div class="note">メモ：${escapeHtml(card.note)}</div>` : ''}
+          <div class="subsection"><h3>単語</h3>${renderWords(card.words)}</div>
+          <div class="subsection"><h3>文法解説</h3>${renderGrammar(card.grammar)}</div>
+        </article>`).join('');
+    }
+
+    function renderWords(words) {
+      if (!words.length) return '<p class="note">単語データはありません。</p>';
+      return `<div class="table-wrap"><table><thead><tr><th>単語</th><th>ピンイン</th><th>意味</th><th>品詞</th><th>声調</th><th>メモ</th></tr></thead><tbody>${words.map(w => `<tr><td>${escapeHtml(w.word)}</td><td>${escapeHtml(w.pinyin)}</td><td>${escapeHtml(w.meaning)}</td><td>${escapeHtml(w.partOfSpeech)}</td><td>${escapeHtml(w.tone)}</td><td>${escapeHtml(w.note)}</td></tr>`).join('')}</tbody></table></div>`;
+    }
+
+    function renderGrammar(grammar) {
+      if (!grammar.length) return '<p class="note">文法解説はありません。</p>';
+      return `<div class="grammar-list">${grammar.map(g => `<div class="grammar-item"><div class="grammar-name">${escapeHtml(g.name || '文法ポイント')}</div><div><strong>${escapeHtml(g.target)}</strong></div><div>${escapeHtml(g.explanation)}</div></div>`).join('')}</div>`;
+    }
+
+    function renderPreview() {
+      try {
+        const items = parseJson(jsonInput.value.trim());
+        preview.innerHTML = items.map(item => `<div class="preview-item"><div class="preview-title">${escapeHtml(item.title)}</div><div class="preview-sentence">${escapeHtml(item.sentence || '（中国語文なし）')}</div><div>${escapeHtml(item.translation || '（日本語訳なし）')}</div><div class="tag"># ${escapeHtml(item.tag)}</div></div>`).join('');
+        showMessage(`${items.length}件をプレビューしています。問題なければ「JSONを読み込む」を押してください。`, 'info');
+      } catch (error) {
+        preview.innerHTML = '';
+        showMessage(error.message, 'error');
+      }
+    }
+
+    document.getElementById('previewButton').addEventListener('click', renderPreview);
+    document.getElementById('sampleButton').addEventListener('click', () => {
+      jsonInput.value = JSON.stringify(sampleData, null, 2);
+      renderPreview();
+    });
+    document.getElementById('loadButton').addEventListener('click', () => {
+      try {
+        const items = parseJson(jsonInput.value.trim());
+        cards = [...items, ...cards];
+        saveCards();
+        preview.innerHTML = '';
+        jsonInput.value = '';
+        showMessage(`${items.length}件読み込みました`, 'success');
+        render();
+      } catch (error) { showMessage(error.message, 'error'); }
+    });
+    document.getElementById('exportButton').addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(cards, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `chinese-sentence-notebook-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+    });
+    document.getElementById('deleteAllButton').addEventListener('click', () => {
+      if (cards.length && confirm('保存したカードをすべて削除します。よろしいですか？')) {
+        cards = [];
+        saveCards();
+        showMessage('すべてのカードを削除しました。', 'success');
+        render();
+      }
+    });
+    cardsEl.addEventListener('click', event => {
+      const button = event.target.closest('button[data-action]');
+      if (!button) return;
+      const id = button.dataset.id;
+      if (button.dataset.action === 'favorite') {
+        cards = cards.map(card => card.id === id ? { ...card, favorite: !card.favorite } : card);
+      } else if (button.dataset.action === 'delete' && confirm('このカードを削除しますか？')) {
+        cards = cards.filter(card => card.id !== id);
+      }
+      saveCards();
+      render();
+    });
+    importFile.addEventListener('change', async event => {
+      const file = event.target.files[0];
+      if (!file) return;
+      jsonInput.value = await file.text();
+      renderPreview();
+      importFile.value = '';
+    });
+    searchInput.addEventListener('input', render);
+    tagFilter.addEventListener('change', render);
+    render();
+  </script>
 </body>
 </html>
