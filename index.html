@@ -145,6 +145,8 @@
 
     .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 18px 0; }
     .tab-button { background: #f4ebe2; color: var(--text); box-shadow: none; }
+    .favorite-filter-button { background: #f4ebe2; color: var(--text); box-shadow: none; }
+    .favorite-filter-button.active { background: var(--warning); color: #fff; box-shadow: 0 8px 18px rgba(164, 107, 0, 0.2); }
     .tab-button.active { background: var(--primary); color: #fff; box-shadow: 0 8px 18px rgba(232, 111, 81, 0.22); }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
@@ -260,6 +262,7 @@
         <select id="tagFilter" aria-label="タグで絞り込み">
           <option value="">すべてのタグ</option>
         </select>
+        <button id="favoriteFilterButton" class="favorite-filter-button" type="button" aria-pressed="false">☆ お気に入りのみ</button>
         <button id="exportButton" class="secondary">JSONエクスポート</button>
         <button id="deleteAllButton" class="danger">全削除</button>
         <span id="stats" class="stats"></span>
@@ -298,9 +301,11 @@
     const cardsEl = document.getElementById('cards');
     const searchInput = document.getElementById('searchInput');
     const tagFilter = document.getElementById('tagFilter');
+    const favoriteFilterButton = document.getElementById('favoriteFilterButton');
     const stats = document.getElementById('stats');
     const importFile = document.getElementById('importFile');
     let cards = loadCards();
+    let showFavoritesOnly = false;
 
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
@@ -379,13 +384,16 @@
       const tag = tagFilter.value;
       return cards.filter(card => {
         const haystack = [card.title, card.originalJapanese, card.sentence, card.pinyin, card.translation, card.note, card.tag, ...card.words.flatMap(w => [w.word, w.pinyin, w.meaning, w.note]), ...card.grammar.flatMap(g => [g.target, g.name, g.explanation])].join(' ').toLowerCase();
-        return (!tag || card.tag === tag) && (!keyword || haystack.includes(keyword));
+        return (!showFavoritesOnly || card.favorite) && (!tag || card.tag === tag) && (!keyword || haystack.includes(keyword));
       });
     }
 
     function render() {
       updateTags();
       const filtered = getFilteredCards();
+      favoriteFilterButton.classList.toggle('active', showFavoritesOnly);
+      favoriteFilterButton.setAttribute('aria-pressed', String(showFavoritesOnly));
+      favoriteFilterButton.textContent = showFavoritesOnly ? '★ お気に入りのみ表示中' : '☆ お気に入りのみ';
       stats.textContent = `${filtered.length} / ${cards.length}件表示`;
       if (filtered.length === 0) {
         cardsEl.innerHTML = '<div class="empty">カードがありません。JSONを貼り付けて読み込んでください。</div>';
@@ -596,6 +604,10 @@ ${sentenceBlocks}
     });
     searchInput.addEventListener('input', render);
     tagFilter.addEventListener('change', render);
+    favoriteFilterButton.addEventListener('click', () => {
+      showFavoritesOnly = !showFavoritesOnly;
+      render();
+    });
     render();
   </script>
 </body>
