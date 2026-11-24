@@ -105,7 +105,7 @@
       margin-top: 14px;
     }
 
-    button, .file-label {
+    button {
       appearance: none;
       border: 0;
       border-radius: 999px;
@@ -119,9 +119,9 @@
       box-shadow: 0 8px 18px rgba(232, 111, 81, 0.22);
     }
 
-    button:hover, .file-label:hover { transform: translateY(-1px); background: var(--primary-dark); }
-    button.secondary, .file-label { background: var(--accent); box-shadow: 0 8px 18px rgba(46, 157, 143, 0.18); }
-    button.secondary:hover, .file-label:hover { background: #237e73; }
+    button:hover { transform: translateY(-1px); background: var(--primary-dark); }
+    button.secondary { background: var(--accent); box-shadow: 0 8px 18px rgba(46, 157, 143, 0.18); }
+    button.secondary:hover { background: #237e73; }
     button.ghost { background: #f4ebe2; color: var(--text); box-shadow: none; }
     button.danger { background: var(--danger); box-shadow: 0 8px 18px rgba(200, 64, 64, 0.18); }
 
@@ -161,12 +161,11 @@
     .small-button { padding: 7px 10px; font-size: 0.8rem; box-shadow: none; }
     .preview { display: grid; gap: 12px; margin-top: 16px; }
     .preview-item { min-width: 0; margin: 0; padding: 14px; border: 1px dashed var(--line); border-radius: 16px; background: #fffaf4; }
-    .preview-title { font-weight: 800; }
-    .preview-sentence { font-size: 1.25rem; margin-top: 4px; font-family: Georgia, "Times New Roman", "Noto Serif SC", serif; }
     .import-source { display: block; font-weight: 700; }
     #textInput { min-height: 180px; margin-top: 6px; font-family: inherit; font-size: 1rem; }
-    .import-details { margin-top: 22px; border-top: 1px solid var(--line); padding-top: 14px; }
-    .import-details summary, .preview-item summary { cursor: pointer; font-weight: 700; padding: 8px 0; }
+    .backup-details { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 8px; }
+    .backup-details summary, .preview-item summary { cursor: pointer; font-weight: 700; padding: 8px 0; }
+    .backup-details input[type=file] { max-width: 100%; min-height: 0; padding: 8px; border-radius: 12px; }
     .preview-item label { display: block; margin-top: 10px; font-weight: 700; }
     .preview-item input, .preview-item textarea { display: block; width: 100%; margin-top: 4px; font: inherit; font-size: 1rem; }
     .preview-item textarea { min-height: 86px; padding: 8px 12px; border-radius: 12px; }
@@ -195,13 +194,12 @@
     .grammar-item { padding: 12px 14px; background: #f8fcfb; border: 1px solid #d8efeb; border-radius: 14px; }
     .grammar-name { font-weight: 800; color: #21786e; }
     .subsection { margin-top: 18px; }
-    .hidden-input { display: none; }
 
     @media (max-width: 680px) {
       header { padding-top: 30px; }
       main { width: min(100% - 20px, 1120px); }
       section { padding: 16px; }
-      button, .file-label { width: 100%; text-align: center; }
+      button { width: 100%; text-align: center; }
       .toolbar { align-items: stretch; }
       input, select { width: 100%; }
       .stats { width: 100%; margin-left: 0; }
@@ -257,20 +255,6 @@
       </div>
       <div id="textMessage" class="status" role="status"></div>
       <form id="textForm"></form>
-      <details class="import-details">
-        <summary>JSONから取り込む</summary>
-        <p class="help">JSONの回答を貼り付けるか、バックアップファイルを選んでください。</p>
-        <textarea id="jsonInput" aria-label="取り込むJSON" placeholder="ここに中国語分析JSONを貼り付けてください"></textarea>
-        <div class="button-row">
-          <button id="previewButton">読み込み前プレビュー</button>
-          <button id="loadButton">JSONを読み込む</button>
-          <button id="sampleButton" class="secondary">サンプルJSONを入れる</button>
-          <label class="file-label" for="importFile">JSONファイルを選ぶ</label>
-          <input id="importFile" class="hidden-input" type="file" accept="application/json,.json">
-        </div>
-        <div id="message" class="status" role="status"></div>
-        <div id="preview" class="preview" aria-live="polite"></div>
-      </details>
     </section>
 
     <section id="listPanel" class="tab-panel" aria-labelledby="list-heading">
@@ -282,35 +266,25 @@
           <option value="">すべてのタグ</option>
         </select>
         <button id="favoriteFilterButton" class="favorite-filter-button" type="button" aria-pressed="false">☆ お気に入りのみ</button>
-        <button id="exportButton" class="secondary">JSONエクスポート</button>
         <button id="deleteAllButton" class="danger">全削除</button>
         <span id="stats" class="stats"></span>
       </div>
+      <details class="backup-details">
+        <summary>バックアップ</summary>
+        <p class="help">保存したファイルからカードを追加できます。</p>
+        <div class="button-row">
+          <button id="exportButton" class="secondary" type="button">バックアップを書き出す</button>
+          <input id="backupFile" type="file" accept="application/json,.json" aria-label="バックアップファイルを選ぶ">
+          <button id="restoreBackupButton" type="button" hidden>ファイルからカードを追加</button>
+        </div>
+        <div id="backupMessage" class="status" role="status"></div>
+      </details>
       <div id="cards" class="cards"></div>
     </section>
   </main>
 
   <script>
     const STORAGE_KEY = 'chinese-sentence-notebook.cards.v1';
-    const sampleData = [{
-      title: '自己紹介で使える中国語',
-      originalJapanese: '私は中国語を勉強するのが好きです。',
-      sentence: '我喜欢学习中文。',
-      pinyin: 'Wǒ xǐhuān xuéxí Zhōngwén.',
-      translation: '私は中国語を勉強するのが好きです。',
-      tag: '自己紹介',
-      source: '',
-      note: '喜欢は「〜が好き」という意味で、後ろに動詞や名詞を置けます。',
-      words: [
-        { word: '我', pinyin: 'wǒ', meaning: '私', partOfSpeech: '代名詞', tone: '3声', note: '自分を表す基本単語です。' },
-        { word: '喜欢', pinyin: 'xǐhuān', meaning: '好き', partOfSpeech: '動詞', tone: '3声＋軽声', note: '後ろに名詞や動詞を置いて使えます。' },
-        { word: '学习', pinyin: 'xuéxí', meaning: '勉強する', partOfSpeech: '動詞', tone: '2声＋2声', note: '学習することを表します。' }
-      ],
-      grammar: [
-        { target: '我喜欢学习中文', name: '喜欢＋動詞', explanation: '「〜するのが好き」と言いたいときに使う形です。' }
-      ]
-    }];
-
     const japaneseInput = document.getElementById('japaneseInput');
     const promptOutput = document.getElementById('promptOutput');
     const promptMessage = document.getElementById('promptMessage');
@@ -318,15 +292,15 @@
     const textForm = document.getElementById('textForm');
     const textMessage = document.getElementById('textMessage');
     const listMessage = document.getElementById('listMessage');
-    const jsonInput = document.getElementById('jsonInput');
-    const message = document.getElementById('message');
-    const preview = document.getElementById('preview');
     const cardsEl = document.getElementById('cards');
     const searchInput = document.getElementById('searchInput');
     const tagFilter = document.getElementById('tagFilter');
     const favoriteFilterButton = document.getElementById('favoriteFilterButton');
     const stats = document.getElementById('stats');
-    const importFile = document.getElementById('importFile');
+    const backupFile = document.getElementById('backupFile');
+    const backupMessage = document.getElementById('backupMessage');
+    const restoreBackupButton = document.getElementById('restoreBackupButton');
+    let pendingBackup = [];
     let cards = loadCards();
     let showFavoritesOnly = false;
 
@@ -334,29 +308,18 @@
       return String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
     }
 
-    function showMessage(text, type = 'info', target = message) {
+    function showMessage(text, type = 'info', target = listMessage) {
       target.textContent = text;
       target.className = `status show ${type}`;
     }
 
-    function parseJson(text) {
-      try {
-        if (!text) {
-          throw new Error('empty');
-        }
-        const parsed = JSON.parse(text);
-        const items = Array.isArray(parsed) ? parsed : [parsed];
-        if (!items.every(item => item && typeof item === 'object' && !Array.isArray(item))) {
-          throw new Error('notObject');
-        }
-        return items.map(normalizeCard);
-      } catch (error) {
-        throw new Error(error.message === 'empty'
-          ? 'JSONが空です。ChatGPTが返したJSONを貼り付けてください。'
-          : error.message === 'notObject'
-            ? 'JSON配列または1件のJSONオブジェクトを入力してください。'
-            : 'JSONの形が少し崩れています。カンマ、ダブルクォーテーション、余分な説明文が入っていないか確認してください。');
+    function parseBackup(text) {
+      const parsed = JSON.parse(text);
+      const items = Array.isArray(parsed) ? parsed : [parsed];
+      if (!items.every(item => item && typeof item === 'object' && !Array.isArray(item))) {
+        throw new Error('Invalid backup');
       }
+      return items.map(normalizeCard);
     }
 
     function normalizeCard(item) {
@@ -654,19 +617,6 @@
       }
     }
 
-    function renderPreview() {
-      try {
-        const items = parseJson(jsonInput.value.trim());
-        preview.innerHTML = items.map(item => `<div class="preview-item"><div class="preview-title">${escapeHtml(item.title)}</div><div class="preview-sentence">${escapeHtml(item.sentence || '（中国語文なし）')}</div><div>${escapeHtml(item.translation || '（日本語訳なし）')}</div><div class="tag"># ${escapeHtml(item.tag)}</div></div>`).join('');
-        showMessage(`${items.length}件をプレビューしています。問題なければ「JSONを読み込む」を押してください。`, 'info');
-      } catch (error) {
-        preview.innerHTML = '';
-        showMessage(error.message, 'error');
-      }
-    }
-
-
-
     function switchTab(tabName) {
       document.querySelectorAll('.tab-button').forEach(button => {
         const active = button.dataset.tab === tabName;
@@ -753,20 +703,6 @@ ${sentenceBlocks}
       textForm.replaceChildren();
       textMessage.className = 'status';
     });
-    document.getElementById('previewButton').addEventListener('click', renderPreview);
-    document.getElementById('sampleButton').addEventListener('click', () => {
-      jsonInput.value = JSON.stringify(sampleData, null, 2);
-      renderPreview();
-    });
-    document.getElementById('loadButton').addEventListener('click', () => {
-      try {
-        const items = parseJson(jsonInput.value.trim());
-        registerCards(items);
-        preview.innerHTML = '';
-        jsonInput.value = '';
-        message.className = 'status';
-      } catch (error) { showMessage(error.message, 'error'); }
-    });
     document.getElementById('exportButton').addEventListener('click', () => {
       const blob = new Blob([JSON.stringify(cards, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -800,12 +736,38 @@ ${sentenceBlocks}
       saveCards();
       render();
     });
-    importFile.addEventListener('change', async event => {
-      const file = event.target.files[0];
+    backupFile.addEventListener('change', async () => {
+      const file = backupFile.files[0];
+      pendingBackup = [];
+      restoreBackupButton.hidden = true;
+      backupMessage.className = 'status';
       if (!file) return;
-      jsonInput.value = await file.text();
-      renderPreview();
-      importFile.value = '';
+      try {
+        const contents = await file.text();
+        if (backupFile.files[0] !== file) return;
+        pendingBackup = parseBackup(contents);
+        restoreBackupButton.hidden = !pendingBackup.length;
+        const message = pendingBackup.length
+          ? pendingBackup.length + '件のカードを追加できます。'
+          : 'バックアップにカードが入っていません。';
+        showMessage(message, 'info', backupMessage);
+      } catch {
+        if (backupFile.files[0] !== file) return;
+        backupFile.value = '';
+        showMessage('バックアップを読み込めませんでした。このアプリで書き出したファイルを選んでください。', 'error', backupMessage);
+      }
+    });
+    restoreBackupButton.addEventListener('click', () => {
+      if (!pendingBackup.length) return;
+      try {
+        registerCards(pendingBackup);
+        pendingBackup = [];
+        backupFile.value = '';
+        restoreBackupButton.hidden = true;
+        backupMessage.className = 'status';
+      } catch (error) {
+        showMessage(error.message, 'error', backupMessage);
+      }
     });
     searchInput.addEventListener('input', render);
     tagFilter.addEventListener('change', render);
