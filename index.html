@@ -485,6 +485,13 @@
     const textLabels = new Map(textFields.flatMap(field =>
       [field.label, ...field.aliases].map(label => [label.toLowerCase(), field])
     ));
+    const headingNames = [...textLabels.keys()].sort((a, b) => b.length - a.length).join('|');
+    const textHeadingPattern = new RegExp(
+      '「[^」]*」|『[^』]*』|“[^”]*”|"[^"]*"'
+      + '|【(' + headingNames + ')】\\s*[:：]?'
+      + '|(' + headingNames + ')(?:\\s*[（(][^）)]+[）)])?\\s*[:：]',
+      'giu'
+    );
 
     function cleanTextLine(line) {
       return line.trim()
@@ -495,8 +502,44 @@
         .trim();
     }
 
+    function readTextLine(line, pendingField) {
+      // Copying a rendered answer can put several labeled fields on one line.
+      const headings = [];
+      for (const match of line.matchAll(textHeadingPattern)) {
+        const label = (match[1] ?? match[2])?.toLowerCase();
+        if (!label) continue; // Quoted text belongs to the surrounding field.
+        const field = textLabels.get(label);
+        if (!headings.length && match.index !== 0) {
+          if (!pendingField) break;
+          headings.push({ field: pendingField, start: 0, end: 0 });
+        }
+        const previous = headings.at(-1);
+        if (previous) {
+          const before = line.slice(previous.end, match.index);
+          const separated = match[1] || /[\s。！？.!?](?:[-*•・][ \t　]*)?$/.test(before);
+          const followsWordList = previous.field.key === 'words' && field.key === 'grammar';
+          if (!separated && (label === '訳' || (previous.field.multiline && !followsWordList && field.key !== 'sentence'))) {
+            continue;
+          }
+        }
+        headings.push({ field, start: match.index, end: match.index + match[0].length });
+      }
+
+      if (!headings.length) {
+        const field = textLabels.get(line.toLowerCase());
+        return [{ field, value: field ? '' : line }];
+      }
+      return headings.map(({ field, end }, index) => {
+        const next = headings[index + 1];
+        let value = line.slice(end, next?.start).trim();
+        if (next) value = value.replace(/\s+[-*•・]$/, '').trimEnd();
+        if (next?.field.key === 'sentence') value = value.replace(/(?:-{3,}|—{2,}|_{3,})$/, '').trimEnd();
+        return { field, value };
+      });
+    }
+
     function parseText(raw) {
-      const lines = raw.split(/\r?\n/).map(cleanTextLine);
+      const lines = raw.split(/\r\n|[\r\n\u2028\u2029]/).map(cleanTextLine);
       const drafts = [];
       let draft = {};
       let activeField;
@@ -517,20 +560,18 @@
           if (activeField && draft[activeField.key]) activeField = undefined;
           continue;
         }
-        const match = line.match(/^【([^】]+)】\s*[:：]?\s*(.*)$/)
-          || line.match(/^([^:：]+?)\s*[:：]\s*(.*)$/)
-          || [line, line, ''];
-        const field = textLabels.get(match[1].trim().toLowerCase());
-        if (field) {
-          sawHeading = true;
-          if (field.key === 'sentence' && draft.sentence) finishDraft();
-          activeField = field;
-          const value = match[2].trim();
-          if (!field.multiline || !draft[field.key]) draft[field.key] = value;
-          else if (value) draft[field.key] += '\n' + value;
-        } else if (activeField?.multiline || (activeField && !draft[activeField.key])) {
+        const pendingField = activeField && !draft[activeField.key] ? activeField : undefined;
+        for (const { field, value } of readTextLine(line, pendingField)) {
+          if (field) {
+            sawHeading = true;
+            if (field.key === 'sentence' && draft.sentence) finishDraft();
+            activeField = field;
+          } else if (!activeField || (!activeField.multiline && draft[activeField.key])) {
+            continue;
+          }
           const key = activeField.key;
-          draft[key] = draft[key] ? draft[key] + '\n' + line : line;
+          if (!activeField.multiline || !draft[key]) draft[key] = value;
+          else if (value) draft[key] += '\n' + value;
         }
       }
       finishDraft();
