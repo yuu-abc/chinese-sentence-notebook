@@ -160,9 +160,16 @@
     .word-cell { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .small-button { padding: 7px 10px; font-size: 0.8rem; box-shadow: none; }
     .preview { display: grid; gap: 12px; margin-top: 16px; }
-    .preview-item { padding: 14px; border: 1px dashed var(--line); border-radius: 16px; background: #fffaf4; }
+    .preview-item { min-width: 0; margin: 0; padding: 14px; border: 1px dashed var(--line); border-radius: 16px; background: #fffaf4; }
     .preview-title { font-weight: 800; }
     .preview-sentence { font-size: 1.25rem; margin-top: 4px; font-family: Georgia, "Times New Roman", "Noto Serif SC", serif; }
+    .import-source { display: block; font-weight: 700; }
+    #textInput { min-height: 180px; margin-top: 6px; font-family: inherit; font-size: 1rem; }
+    .import-details { margin-top: 22px; border-top: 1px solid var(--line); padding-top: 14px; }
+    .import-details summary, .preview-item summary { cursor: pointer; font-weight: 700; padding: 8px 0; }
+    .preview-item label { display: block; margin-top: 10px; font-weight: 700; }
+    .preview-item input, .preview-item textarea { display: block; width: 100%; margin-top: 4px; font: inherit; font-size: 1rem; }
+    .preview-item textarea { min-height: 86px; padding: 8px 12px; border-radius: 12px; }
 
     .stats { color: var(--muted); font-weight: 700; margin-left: auto; }
     .cards { display: grid; gap: 18px; margin-top: 18px; }
@@ -209,13 +216,13 @@
 <body>
   <header>
     <h1>中国語センテンスノート</h1>
-    <p class="lead">日本語文からChatGPT用プロンプトを作り、返ってきたJSONを読み込んで、中国語文・ピンイン・日本語訳・単語・文法解説を学習カードとして保存できます。</p>
+    <p class="lead">ChatGPTの回答を貼り付けて、中国語文・ピンイン・日本語訳・単語・文法解説を学習カードにできます。</p>
   </header>
 
   <main>
     <div class="tabs" role="tablist" aria-label="機能切り替え">
       <button class="tab-button active" data-tab="create" role="tab" aria-selected="true">日本語から作る</button>
-      <button class="tab-button" data-tab="json" role="tab" aria-selected="false">JSONを読み込む</button>
+      <button class="tab-button" data-tab="import" role="tab" aria-selected="false">貼り付けて取り込む</button>
       <button class="tab-button" data-tab="list" role="tab" aria-selected="false">カード一覧</button>
     </div>
 
@@ -223,8 +230,8 @@
       <h2 id="create-heading">日本語から作る</h2>
       <div class="flow" aria-label="使い方の流れ">
         <div class="flow-step">1. 日本語を入力</div>
-        <div class="flow-step">2. ChatGPTでJSON作成</div>
-        <div class="flow-step">3. JSON読み込み</div>
+        <div class="flow-step">2. ChatGPTで翻訳</div>
+        <div class="flow-step">3. 回答を貼り付け</div>
         <div class="flow-step">4. カード保存</div>
       </div>
       <p class="help">複数の日本語文を改行区切りで入力できます。</p>
@@ -235,28 +242,40 @@
         <button id="promptButton">ChatGPT用プロンプトを作成</button>
         <button id="copyPromptButton" class="secondary">コピー</button>
       </div>
-      <p class="help">コピーしたプロンプトをChatGPTに貼り付け、返ってきたJSONを『JSONを読み込む』タブに貼り付けてください。</p>
+      <p class="help">プロンプトをChatGPTに送ったら、回答をコピーして「貼り付けて取り込む」タブに貼り付けてください。</p>
       <textarea id="promptOutput" class="prompt-output" readonly placeholder="ここにChatGPT用プロンプトが表示されます"></textarea>
       <div id="promptMessage" class="status" role="status"></div>
     </section>
 
-    <section id="jsonPanel" class="tab-panel" aria-labelledby="json-heading">
-      <h2 id="json-heading">JSONを読み込む</h2>
-      <p class="help">ChatGPTが返したJSON配列、または1件だけのJSONオブジェクトを貼り付けてください。</p>
-      <textarea id="jsonInput" placeholder="ここに中国語分析JSONを貼り付けてください"></textarea>
+    <section id="importPanel" class="tab-panel" aria-labelledby="import-heading">
+      <h2 id="import-heading">貼り付けて取り込む</h2>
+      <label class="import-source" for="textInput">ChatGPTの回答</label>
+      <p class="help" id="textHelp">「中国語」「ピンイン」「日本語訳」などの見出し付きの回答を貼り付けてください。中国語だけの1行も登録できます。</p>
+      <textarea id="textInput" aria-describedby="textHelp" placeholder="中国語：未来很难预测。&#10;ピンイン：Wèilái hěn nán yùcè.&#10;日本語訳：未来は予測しにくい。"></textarea>
       <div class="button-row">
-        <button id="previewButton">読み込み前プレビュー</button>
-        <button id="loadButton">JSONを読み込む</button>
-        <button id="sampleButton" class="secondary">サンプルJSONを入れる</button>
-        <label class="file-label" for="importFile">JSONをインポート</label>
-        <input id="importFile" class="hidden-input" type="file" accept="application/json,.json">
+        <button id="textPreviewButton" type="button">取り込み内容を確認</button>
       </div>
-      <div id="message" class="status" role="status"></div>
-      <div id="preview" class="preview" aria-live="polite"></div>
+      <div id="textMessage" class="status" role="status"></div>
+      <form id="textForm"></form>
+      <details class="import-details">
+        <summary>JSONから取り込む</summary>
+        <p class="help">JSONの回答を貼り付けるか、バックアップファイルを選んでください。</p>
+        <textarea id="jsonInput" aria-label="取り込むJSON" placeholder="ここに中国語分析JSONを貼り付けてください"></textarea>
+        <div class="button-row">
+          <button id="previewButton">読み込み前プレビュー</button>
+          <button id="loadButton">JSONを読み込む</button>
+          <button id="sampleButton" class="secondary">サンプルJSONを入れる</button>
+          <label class="file-label" for="importFile">JSONファイルを選ぶ</label>
+          <input id="importFile" class="hidden-input" type="file" accept="application/json,.json">
+        </div>
+        <div id="message" class="status" role="status"></div>
+        <div id="preview" class="preview" aria-live="polite"></div>
+      </details>
     </section>
 
     <section id="listPanel" class="tab-panel" aria-labelledby="list-heading">
       <h2 id="list-heading">カード一覧</h2>
+      <div id="listMessage" class="status" role="status"></div>
       <div class="toolbar">
         <input id="searchInput" class="search-input" type="search" placeholder="中国語・ピンイン・日本語訳・単語を検索">
         <select id="tagFilter" aria-label="タグで絞り込み">
@@ -295,6 +314,10 @@
     const japaneseInput = document.getElementById('japaneseInput');
     const promptOutput = document.getElementById('promptOutput');
     const promptMessage = document.getElementById('promptMessage');
+    const textInput = document.getElementById('textInput');
+    const textForm = document.getElementById('textForm');
+    const textMessage = document.getElementById('textMessage');
+    const listMessage = document.getElementById('listMessage');
     const jsonInput = document.getElementById('jsonInput');
     const message = document.getElementById('message');
     const preview = document.getElementById('preview');
@@ -370,7 +393,20 @@
       catch { return []; }
     }
 
-    function saveCards() { localStorage.setItem(STORAGE_KEY, JSON.stringify(cards)); }
+    function saveCards(nextCards = cards) { localStorage.setItem(STORAGE_KEY, JSON.stringify(nextCards)); }
+
+    function registerCards(items) {
+      const nextCards = [...items, ...cards];
+      try { saveCards(nextCards); }
+      catch { throw new Error('端末に保存できませんでした。入力内容を残したまま、ブラウザの保存設定や空き容量を確認してください。'); }
+      cards = nextCards;
+      searchInput.value = '';
+      tagFilter.value = '';
+      showFavoritesOnly = false;
+      switchTab('list');
+      render();
+      showMessage(`${items.length}件のカードを登録しました。`, 'success', listMessage);
+    }
 
     function updateTags() {
       const current = tagFilter.value;
@@ -396,7 +432,7 @@
       favoriteFilterButton.textContent = showFavoritesOnly ? '★ お気に入りのみ表示中' : '☆ お気に入りのみ';
       stats.textContent = `${filtered.length} / ${cards.length}件表示`;
       if (filtered.length === 0) {
-        cardsEl.innerHTML = '<div class="empty">カードがありません。JSONを貼り付けて読み込んでください。</div>';
+        cardsEl.innerHTML = '<div class="empty">表示するカードがありません。</div>';
         return;
       }
       cardsEl.innerHTML = filtered.map(card => `
@@ -432,6 +468,149 @@
     function renderGrammar(grammar) {
       if (!grammar.length) return '<p class="note">文法解説はありません。</p>';
       return `<div class="grammar-list">${grammar.map(g => `<div class="grammar-item"><div class="grammar-name">${escapeHtml(g.name || '文法ポイント')}</div><div><strong>${escapeHtml(g.target)}</strong></div><div>${escapeHtml(g.explanation)}</div></div>`).join('')}</div>`;
+    }
+
+    const textFields = [
+      { key: 'sentence', label: '中国語', aliases: ['中国語文', '中国語訳', '中文', '簡体字'] },
+      { key: 'pinyin', label: 'ピンイン', aliases: ['拼音', 'Pinyin'] },
+      { key: 'translation', label: '日本語訳', aliases: ['日本語', '和訳', '訳'] },
+      { key: 'words', label: '単語', aliases: ['重要単語', '単語解説', '語彙'], multiline: true },
+      { key: 'grammar', label: '文法', aliases: ['文法解説', '文法ポイント', '解説'], multiline: true },
+      { key: 'title', label: 'タイトル', aliases: [] },
+      { key: 'originalJapanese', label: '元の日本語', aliases: ['日本語原文'] },
+      { key: 'tag', label: 'タグ', aliases: [] },
+      { key: 'source', label: '出典', aliases: [] },
+      { key: 'note', label: 'メモ', aliases: ['学習ポイント', '補足'], multiline: true }
+    ];
+    const textLabels = new Map(textFields.flatMap(field =>
+      [field.label, ...field.aliases].map(label => [label.toLowerCase(), field])
+    ));
+
+    function cleanTextLine(line) {
+      return line.trim()
+        .replace(/^(?:>\s*)+/, '')
+        .replace(/^#{1,6}\s+/, '')
+        .replace(/^(?:[-*•]\s+|\d+[.)、]\s*)/, '')
+        .replace(/\*\*([^*]+)\*\*|__([^_]+)__|\x60([^\x60]+)\x60/g, (_, bold, underline, code) => bold ?? underline ?? code)
+        .trim();
+    }
+
+    function parseText(raw) {
+      const lines = raw.split(/\r?\n/).map(cleanTextLine);
+      const drafts = [];
+      let draft = {};
+      let activeField;
+      let sawHeading = false;
+      function finishDraft() {
+        if (Object.values(draft).some(Boolean)) drafts.push(draft);
+        draft = {};
+        activeField = undefined;
+      }
+
+      for (const line of lines) {
+        if (/^(?:-{3,}|—{2,}|_{3,})$/.test(line)) {
+          if (draft.sentence) finishDraft();
+          continue;
+        }
+        if (/^(?:\x60{3,}|~{3,})/.test(line)) continue;
+        if (!line) {
+          if (activeField && draft[activeField.key]) activeField = undefined;
+          continue;
+        }
+        const match = line.match(/^【([^】]+)】\s*[:：]?\s*(.*)$/)
+          || line.match(/^([^:：]+?)\s*[:：]\s*(.*)$/)
+          || [line, line, ''];
+        const field = textLabels.get(match[1].trim().toLowerCase());
+        if (field) {
+          sawHeading = true;
+          if (field.key === 'sentence' && draft.sentence) finishDraft();
+          activeField = field;
+          const value = match[2].trim();
+          if (!field.multiline || !draft[field.key]) draft[field.key] = value;
+          else if (value) draft[field.key] += '\n' + value;
+        } else if (activeField?.multiline || (activeField && !draft[activeField.key])) {
+          const key = activeField.key;
+          draft[key] = draft[key] ? draft[key] + '\n' + line : line;
+        }
+      }
+      finishDraft();
+
+      if (sawHeading && drafts.length) return drafts;
+      const plainLines = lines.filter(line => line && !/^(?:\x60{3,}|~{3,})/.test(line));
+      if (plainLines.length === 1 && /\p{Script=Han}/u.test(plainLines[0])
+        && !/[\p{Script=Hiragana}\p{Script=Katakana}{}\[\]<>]/u.test(plainLines[0])) {
+        return [{ sentence: plainLines[0] }];
+      }
+      throw new Error('「中国語：…」などの見出しが付いた回答か、中国語だけの1行を貼り付けてください。');
+    }
+
+    function parseWords(value) {
+      return value.split(/\n|[、；;]\s*(?=[\p{Script=Han}]+\s*[（(=＝])/u)
+        .map(cleanTextLine).filter(Boolean).map(line => {
+          if (/[|｜]/.test(line)) {
+            const [word, pinyin, meaning, partOfSpeech, tone, note] = line.split(/[|｜]/).map(part => part.trim());
+            return { word, pinyin, meaning, partOfSpeech, tone, note };
+          }
+          const match = line.match(/^(.+?)(?:[（(]([^）)]+)[）)])?\s*[=＝:：]\s*(.+)$/);
+          return match ? { word: match[1].trim(), pinyin: match[2], meaning: match[3] } : { word: line };
+        });
+    }
+
+    function parseGrammar(value) {
+      return value.split('\n').map(cleanTextLine).filter(Boolean).map(line => {
+        const parts = line.split(/[|｜]/).map(part => part.trim());
+        if (parts.length >= 3) {
+          const [target, name, ...explanation] = parts;
+          return { target, name, explanation: explanation.join('｜') };
+        }
+        if (parts.length === 2) return { name: parts[0], explanation: parts[1] };
+        return { explanation: line };
+      });
+    }
+
+    function renderTextField(field, draft) {
+      const value = escapeHtml(draft[field.key]);
+      const name = ' name="' + field.key + '"';
+      const control = field.multiline
+        ? '<textarea rows="3"' + name + '>' + value + '</textarea>'
+        : '<input type="text"' + name + ' value="' + value + '"' + (field.key === 'sentence' ? ' required lang="zh-CN"' : '') + '>';
+      return '<label>' + field.label + (field.key === 'sentence' ? '（必須）' : '') + control + '</label>';
+    }
+
+    function previewTextImport() {
+      textForm.replaceChildren();
+      try {
+        const drafts = parseText(textInput.value);
+        const [mainFields, extraFields] = [textFields.slice(0, 5), textFields.slice(5)];
+        textForm.innerHTML = '<div class="preview">' + drafts.map((draft, index) =>
+          '<fieldset class="preview-item"><legend>カード ' + (index + 1) + '</legend>'
+          + mainFields.map(field => renderTextField(field, draft)).join('')
+          + '<details><summary>タイトル・タグなど</summary>'
+          + extraFields.map(field => renderTextField(field, draft)).join('')
+          + '</details></fieldset>'
+        ).join('') + '</div><div class="button-row"><button type="submit">カードを登録</button></div>';
+        showMessage(drafts.length + '件を読み取りました。内容はここで修正できます。', 'info', textMessage);
+      } catch (error) {
+        showMessage(error.message, 'error', textMessage);
+      }
+    }
+
+    function saveTextImport(event) {
+      event.preventDefault();
+      try {
+        const items = Array.from(textForm.querySelectorAll('fieldset'), fieldset => {
+          const draft = Object.fromEntries(Array.from(fieldset.elements, field => [field.name, field.value.trim()]));
+          if (!draft.sentence) throw new Error('すべてのカードに中国語を入力してください。');
+          return normalizeCard({ ...draft, words: parseWords(draft.words), grammar: parseGrammar(draft.grammar) });
+        });
+        if (!items.length) return;
+        registerCards(items);
+        textInput.value = '';
+        textForm.replaceChildren();
+        textMessage.className = 'status';
+      } catch (error) {
+        showMessage(error.message, 'error', textMessage);
+      }
     }
 
     function renderPreview() {
@@ -471,39 +650,21 @@
 
 ${sentenceBlocks}
 
-結果は、次の形式のJSON配列だけで出力してください。
-説明文やコードブロック記号は付けないでください。
-入力された日本語文の順番を変えないでください。
+日本語文ごとに、下の見出しを使って普通のテキストで回答してください。見出しは変えないでください。
+複数あるときは入力順に並べ、カードの間に「---」だけの行を入れてください。
+前置き・あとがき・コードブロックは不要です。単語と文法は1項目1行で、行内の項目を「｜」で区切ってください。
 
-[
-{
-"title": "内容が分かる短い日本語タイトル",
-"originalJapanese": "元の日本語文をそのまま記載",
-"sentence": "自然な中国語文",
-"pinyin": "ピンイン",
-"translation": "自然な日本語訳",
-"tag": "内容を表す短いタグ",
-"source": "",
-"note": "文全体を理解するための短い学習ポイント",
-"words": [
-{
-"word": "重要な中国語単語",
-"pinyin": "ピンイン",
-"meaning": "日本語の意味",
-"partOfSpeech": "品詞",
-"tone": "声調",
-"note": "初心者向けのやさしい補足"
-}
-],
-"grammar": [
-{
-"target": "中国語文の該当部分",
-"name": "文法名",
-"explanation": "初心者にも分かるやさしい説明"
-}
-]
-}
-]`;
+中国語：自然な中国語文
+ピンイン：声調記号付きピンイン
+日本語訳：自然な日本語訳
+タイトル：内容が分かる短い日本語タイトル
+元の日本語：入力された日本語文
+タグ：内容を表す短いタグ
+メモ：短い学習ポイント
+単語：
+中国語の単語｜ピンイン｜日本語の意味｜品詞｜声調｜補足
+文法：
+中国語文の該当部分｜文法名｜初心者向けの説明`;
       showMessage(`${sentences.length}文分のChatGPT用プロンプトを作成しました。`, 'success', promptMessage);
     }
 
@@ -545,6 +706,12 @@ ${sentenceBlocks}
     document.querySelectorAll('.tab-button').forEach(button => button.addEventListener('click', () => switchTab(button.dataset.tab)));
     document.getElementById('promptButton').addEventListener('click', buildPrompt);
     document.getElementById('copyPromptButton').addEventListener('click', copyPrompt);
+    document.getElementById('textPreviewButton').addEventListener('click', previewTextImport);
+    textForm.addEventListener('submit', saveTextImport);
+    textInput.addEventListener('input', () => {
+      textForm.replaceChildren();
+      textMessage.className = 'status';
+    });
     document.getElementById('previewButton').addEventListener('click', renderPreview);
     document.getElementById('sampleButton').addEventListener('click', () => {
       jsonInput.value = JSON.stringify(sampleData, null, 2);
@@ -553,13 +720,10 @@ ${sentenceBlocks}
     document.getElementById('loadButton').addEventListener('click', () => {
       try {
         const items = parseJson(jsonInput.value.trim());
-        cards = [...items, ...cards];
-        saveCards();
+        registerCards(items);
         preview.innerHTML = '';
         jsonInput.value = '';
-        showMessage(`${items.length}件読み込みました`, 'success');
-        switchTab('list');
-        render();
+        message.className = 'status';
       } catch (error) { showMessage(error.message, 'error'); }
     });
     document.getElementById('exportButton').addEventListener('click', () => {
